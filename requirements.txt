@@ -1,0 +1,23 @@
+# Core NLP & Embeddings
+sentence-transformers
+transformers
+accelerate
+huggingface_hub
+tiktoken
+
+# Graph Processing (Rất quan trọng cho BFS/MST)
+networkx
+scipy
+numpy
+pandas
+
+# Vector Database & Retrieval
+faiss-cpu
+rank-bm25
+
+# Evaluation & Utilities
+scikit-learn
+tqdm
+jinja2
+ipywidgets
+EOF
