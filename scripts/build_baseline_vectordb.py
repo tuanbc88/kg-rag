@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 
-"""Script to build a vector store for baseline RAG approaches."""
+"""Script to build a vector store supporting both Local GPU and OpenAI embedding models."""
 
 import argparse
 import os
 import sys
 from pathlib import Path
-
 from dotenv import load_dotenv
 
+# Thêm gói nhúng HuggingFace cho chế độ Local
+from langchain_huggingface import HuggingFaceEmbeddings
 
 # Add the parent directory to the path so we can import the modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -21,7 +22,7 @@ from kg_rag.methods.baseline_rag.vector_store import ChromaDBManager
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Build a vector store for baseline RAG approaches"
+        description="Build a vector store for baseline RAG approaches (Supports Hybrid/Local/OpenAI)"
     )
     parser.add_argument(
         "--docs-dir", type=str, required=True, help="Directory containing the documents"
@@ -47,8 +48,8 @@ def parse_args():
     parser.add_argument(
         "--embedding-model",
         type=str,
-        default="text-embedding-3-small",
-        help="OpenAI embedding model to use",
+        default="BAAI/bge-small-en-v1.5",  # Mặc định chọn local cho bạn đỡ lỗi
+        help="Embedding model to use (e.g., 'text-embedding-3-small' for OpenAI or HF repo id for Local)",
     )
     parser.add_argument("--verbose", action="store_true", help="Print verbose output")
 
@@ -57,21 +58,32 @@ def parse_args():
 
 def main():
     """Build a vector store for baseline RAG approaches."""
-    # Load environment variables
+    # Load environment variables (Đọc file .env nếu dùng OpenAI)
     load_dotenv()
-
     args = parse_args()
 
-    # Check for OpenAI API key
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    if not openai_api_key:
-        print("Error: OPENAI_API_KEY environment variable is not set.")
-        sys.exit(1)
+    # TỰ ĐỘNG PHÂN TÁCH CHẾ ĐỘ CHẠY (DETECTION LOGIC)
+    # Nếu tên model chứa "text-embedding" hoặc "openai" -> Chạy OpenAI Chế độ chuyên dụng
+    is_openai = "text-embedding" in args.embedding_model.lower() or "openai" in args.embedding_model.lower()
 
-    # Initialize components
-    embedder = OpenAIEmbedding(
-        api_key=openai_api_key, model=args.embedding_model, verbose=args.verbose
-    )
+    if is_openai:
+        print(f"--> Chế độ: [OpenAI API] - Mô hình: {args.embedding_model}")
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if not openai_api_key:
+            print("Error: OPENAI_API_KEY environment variable is not set nhưng bạn đang gọi mô hình OpenAI.")
+            sys.exit(1)
+        
+        # Gọi class OpenAI gốc của dự án
+        embedder = OpenAIEmbedding(
+            api_key=openai_api_key, model=args.embedding_model, verbose=args.verbose
+        )
+    else:
+        print(f"--> Chế độ: [Local GPU T4] - Mô hình: {args.embedding_model}")
+        # Khởi tạo mô hình nhúng HuggingFace chạy bằng CUDA của GPU T4
+        embedder = HuggingFaceEmbeddings(
+            model_name=args.embedding_model,
+            model_kwargs={'device': 'cuda'}  # Ép chạy hoàn toàn trên GPU T4
+        )
 
     processor = DocumentProcessor(
         chunk_size=args.chunk_size,

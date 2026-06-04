@@ -20,3 +20,11 @@ scikit-learn
 tqdm
 jinja2
 ipywidgets
+
+langchain 
+langchain-community 
+pypdf 
+chroma-hnswlib.0.50
+
+chromadb
+distro
