@@ -20,4 +20,3 @@ scikit-learn
 tqdm
 jinja2
 ipywidgets
-EOF
